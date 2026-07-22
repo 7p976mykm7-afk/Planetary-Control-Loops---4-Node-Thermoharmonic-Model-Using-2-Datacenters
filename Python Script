@@ -1,0 +1,68 @@
+pythonimport numpy as np
+
+# Config
+np.random.seed(1)
+n = 100
+s = 300
+dt = 0.02
+v = 1.5
+b = -0.4
+gp, gd = 8.0, 2.0
+sn = 0.35
+th = 1.1
+
+# Compact Map Layout
+p = np.random.uniform(
+    -1, 1, (n, 2)
+)
+
+# Flat Matrix Builders
+d = np.linalg.norm(
+    p[:, None] - p, axis=2
+)
+C = 12.0 * np.exp(-2.5 * d)
+np.fill_diagonal(C, 0)
+
+T = (d / (v * dt)).astype(int)
+T = np.maximum(1, T)
+np.fill_diagonal(T, 0)
+
+M = np.random.uniform(1, 4, n)
+K = M * np.random.uniform(25, 55, n)
+G = np.random.uniform(0.3, 1.5, n)
+
+mt = np.max(T)
+X = np.zeros((s + mt, n))
+V = np.zeros((s + mt, n))
+F = np.zeros(s)
+
+# Main Loop
+for t in range(mt, s + mt):
+    xc = X[t - 1]
+    vc = V[t - 1]
+
+    # Flattened Delay Scan
+    fl = np.zeros(n)
+    for i in range(n):
+        li = t - 1 - T[i]
+        fl[i] = np.sum(
+            C[i] * X[li, : ]
+        )
+
+    # Core Calculations
+    fi = -K * xc + b * (xc**3) - G * vc
+    fc = -gp * xc - gd * vc
+    fs = np.random.normal(0, sn, n)
+
+    a = (fi + fl + fc) / M
+    V[t] = vc + a * dt + fs * np.sqrt(dt)
+    X[t] = xc + V[t] * dt
+
+    F[t - mt] = np.sum(
+        np.abs(X[t]) > th
+    )
+
+pf = np.minimum(
+    np.cumsum(F) / n, 1.0
+)
+print(f"Max P: {pf[-1]:.2f}")
